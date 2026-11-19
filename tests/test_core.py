@@ -56,3 +56,12 @@ def test_daangn_parse():
     assert parse_list(html)[0]["price"] == 80000
     d = parse_detail(html)
     assert d["jibun"] == "2478" and d["dong"] == "신흥동" and d["floor"] == "5/20"
+
+
+def test_rent_interp():
+    from alert.rentwatch import Complex, _interp
+    t = [[5000, 230], [10000, 205], [15000, 180]]
+    assert _interp(t, 7500) == 217.5 and _interp(t, 20000) == 155
+    c = Complex({"name": "광교해모로", "tables": [t]}, 95)
+    assert c.matches("광교 해모로") and not c.matches("광교")
+    assert not c.size_ok(84, 80) and c.size_ok(99, 130)

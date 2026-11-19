@@ -14,6 +14,7 @@ import yaml
 from .common import Listing, fmt_price, log, norm_name
 from .molit import from_env
 from .notify import SOURCE_KO, Telegram, format_listing
+from .rentwatch import RentWatch, format_rent
 from .sources.daangn import Daangn
 from .sources.naver import Naver, NaverBlocked
 from .sources.zigbang import Zigbang
@@ -45,6 +46,8 @@ def main() -> int:
     ap.add_argument("--dry-run", action="store_true", help="알림 기록을 저장하지 않고 콘솔에만 출력")
     ap.add_argument("--only", default="", help="쉼표로 구분한 소스만 실행 (zigbang,daangn,naver)")
     ap.add_argument("--regions", default="", help="쉼표로 구분한 지역 이름만 실행 (테스트용)")
+    ap.add_argument("--rent-only", action="store_true", help="반전세 감시만 실행")
+    ap.add_argument("--no-rent", action="store_true", help="반전세 감시 건너뛰기")
     args = ap.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s",
@@ -80,17 +83,31 @@ def main() -> int:
         dongs_by_region[r["name"]] = sorted({t.umd for t in db.by_sgg.get(r["lawd_cd"], []) if t.umd})
 
     listings: list[Listing] = []
+    rent_listings: list[Listing] = []
+    rw = RentWatch(cfg)
     errors: list[str] = []
     for name in ("zigbang", "daangn", "naver"):
         if name not in enabled:
             continue
         try:
             if name == "zigbang":
-                listings += Zigbang(cfg, state_dir).fetch(regions, flt)
+                if not args.rent_only:
+                    listings += Zigbang(cfg, state_dir).fetch(regions, flt)
+                if rw.enabled and not args.no_rent:
+                    rent_listings += rw.zigbang()
             elif name == "daangn":
-                listings += Daangn(cfg, state_dir).fetch(regions, flt, dongs_by_region)
+                dg = Daangn(cfg, state_dir)
+                if not args.rent_only:
+                    listings += dg.fetch(regions, flt, dongs_by_region)
+                if rw.enabled and not args.no_rent:
+                    rent_listings += rw.daangn(dg)
+                    dg.save()
             elif name == "naver":
-                listings += Naver(cfg, state_dir).fetch(regions, flt)
+                nv = Naver(cfg, state_dir)
+                if not args.rent_only:
+                    listings += nv.fetch(regions, flt)
+                if rw.enabled and not args.no_rent:
+                    rent_listings += rw.naver(nv)
         except NaverBlocked as e:
             errors.append(f"네이버: {e}")
             log.warning("%s", e)
@@ -144,6 +161,18 @@ def main() -> int:
             chunk += line + "\n"
         tg.send(chunk)
 
+    # 반전세 감시: 같은 매물이라도 보증금/월세 조건이 바뀌면 다시 알림
+    rent_hits = rw.check(rent_listings)
+    rkey = lambda l: f"rent:{l.key}:{l.price}:{l.extra['rent']}"
+    rent_new = [(l, lim) for l, lim in rent_hits if rkey(l) not in seen]
+    rent_new.sort(key=lambda x: x[0].extra["rent"] - x[1])
+    log.info("반전세: 확인 %d건, 조건 충족 %d건, 신규 %d건", len(rent_listings), len(rent_hits), len(rent_new))
+    for l, lim in rent_new[:limit]:
+        tg.send(format_rent(l, lim))
+    if len(rent_new) > limit:
+        tg.send(f"➕ 반전세 외 {len(rent_new) - limit}건\n" + "\n".join(
+            f"• {l.name} {fmt_price(l.price)}/{l.extra['rent']} {l.url}" for l, _ in rent_new[limit:])[:3900])
+
     # 오류 알림은 하루 한 번만
     today = date.today().isoformat()
     if errors and state.get("error_notified") != today:
@@ -157,12 +186,14 @@ def main() -> int:
                 seen[l.key] = {"price": l.price, "t": now}
             else:
                 seen[l.key]["t"] = now          # 아직 올라와 있음
+        for l, _ in rent_hits:
+            seen[rkey(l)] = {"price": l.price, "t": now}
         # 30일 동안 안 보인 기록 정리 (다시 조건 충족하면 재알림)
         seen = {k: v for k, v in seen.items() if now - v["t"] < 30 * 86400}
         state["alerted"] = seen
         state["last_run"] = now
         seen_path.write_text(json.dumps(state, ensure_ascii=False, indent=0), "utf-8")
-    log.info("완료: 신규 알림 %d건, %.0f초", len(new), time.time() - t0)
+    log.info("완료: 신규 알림 매매 %d건 · 반전세 %d건, %.0f초", len(new), len(rent_new), time.time() - t0)
     return 0
 
 

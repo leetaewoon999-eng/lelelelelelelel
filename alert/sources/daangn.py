@@ -31,7 +31,7 @@ def parse_list(html: str) -> list[dict]:
             continue
         seen.add(oid)
         out.append({"id": oid, "sales_type": st, "trade_type": tt, "price": int(price),
-                    "area": float(area), "dong": dong})
+                    "monthly": int(monthly), "area": float(area), "dong": dong})
     return out
 
 
@@ -65,12 +65,27 @@ class Daangn:
             self.details = json.loads(self.cache_path.read_text("utf-8"))
         except Exception:
             self.details = {}
+        self.pages: dict[str, str] = {}
 
-    def _detail(self, oid: str) -> dict:
+    def page(self, path: str) -> str:
+        """동 지도 페이지 (한 번 실행 중엔 재사용)."""
+        if path not in self.pages:
+            r = self.http.get(f"{BASE}/map/{path}")
+            self.pages[path] = r.text if r.status_code == 200 else ""
+        return self.pages[path]
+
+    def detail(self, oid: str) -> dict:
         if oid not in self.details:
             html = self.http.get(f"{BASE}/articles/{oid}").text
             self.details[oid] = parse_detail(html)
         return self.details[oid]
+
+    _detail = detail
+
+    def save(self):
+        if len(self.details) > 3000:
+            self.details = dict(list(self.details.items())[-3000:])
+        self.cache_path.write_text(json.dumps(self.details, ensure_ascii=False), "utf-8")
 
     def fetch(self, regions: list[dict], flt: dict, dongs_by_region: dict[str, list[str]]) -> list[Listing]:
         out: list[Listing] = []
@@ -80,12 +95,8 @@ class Daangn:
             n = 0
             for dong in dongs:
                 parts = [region["sido"], region["sigungu"], dong]      # 세종: 시도/동
-                url = f"{BASE}/map/" + "/".join(quote(x) for x in parts if x)
                 try:
-                    r = self.http.get(url)
-                    if r.status_code != 200:
-                        continue
-                    arts = parse_list(r.text)
+                    arts = parse_list(self.page("/".join(quote(x) for x in parts if x)))
                 except Exception as e:
                     log.warning("당근 %s %s 실패: %s", region["name"], dong, e)
                     continue
@@ -118,8 +129,5 @@ class Daangn:
                         floor=d["floor"], jibun=d["jibun"], region=region["name"],
                     ))
             log.info("당근 %s: 동 %d곳, 매물 %d건 확인", region["name"], len(dongs), n)
-        # 상세 캐시는 최근 3000건만 유지
-        if len(self.details) > 3000:
-            self.details = dict(list(self.details.items())[-3000:])
-        self.cache_path.write_text(json.dumps(self.details, ensure_ascii=False), "utf-8")
+        self.save()
         return out

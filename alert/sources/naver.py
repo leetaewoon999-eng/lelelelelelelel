@@ -43,42 +43,42 @@ class Naver:
             dongs = [d for d in dongs if d.get("CortarNm") in region["dongs"]]
         return dongs
 
+    def articles(self, d: dict, params: dict):
+        """법정동 하나의 매물 목록 (페이지 순회)."""
+        lat, lon = float(d["MapYCrdn"]), float(d["MapXCrdn"])
+        base = {"z": 15, "lat": lat, "lon": lon,
+                "btm": lat - 0.03, "top": lat + 0.03, "lft": lon - 0.04, "rgt": lon + 0.04,
+                "cortarNo": d["CortarNo"], "sort": "dateDesc", **params}
+        for page in range(1, 31):
+            data = self._json("/cluster/ajax/articleList", {**base, "page": page})
+            body = data.get("body") or []
+            yield from body
+            if not data.get("more") or not body:
+                break
+
     def fetch(self, regions: list[dict], flt: dict) -> list[Listing]:
         out: list[Listing] = []
         for region in regions:
             n = 0
             for d in self._dongs(region):
-                lat, lon = float(d["MapYCrdn"]), float(d["MapXCrdn"])
-                base = {
-                    "rletTpCd": "APT", "tradTpCd": "A1", "z": 15,
-                    "lat": lat, "lon": lon,
-                    "btm": lat - 0.03, "top": lat + 0.03, "lft": lon - 0.04, "rgt": lon + 0.04,
-                    "cortarNo": d["CortarNo"], "dprcMax": flt["max_price"],
-                    "sort": "dateDesc",
-                }
-                for page in range(1, 31):
-                    data = self._json("/cluster/ajax/articleList", {**base, "page": page})
-                    body = data.get("body") or []
-                    for a in body:
-                        n += 1
-                        try:
-                            area = float(a.get("spc2") or 0)       # spc2 = 전용면적
-                            price = int(a.get("prc") or 0)
-                        except ValueError:
-                            continue
-                        if not price or price > flt["max_price"] or area < flt["min_area"]:
-                            continue
-                        out.append(Listing(
-                            source=self.name, id=str(a["atclNo"]), name=a.get("atclNm", ""),
-                            sido=region["sido"], sigungu=region["sigungu"],
-                            dong=d.get("CortarNm", ""), area=area, price=price,
-                            url=f"https://m.land.naver.com/article/info/{a['atclNo']}",
-                            floor=a.get("flrInfo", ""), building=a.get("bildNm", ""),
-                            title=a.get("atclFetrDesc", ""), bcode=str(a.get("cortarNo") or d["CortarNo"]),
-                            region=region["name"],
-                            extra={"realtor": a.get("rltrNm"), "same_addr": a.get("sameAddrCnt")},
-                        ))
-                    if not data.get("more") or not body:
-                        break
+                for a in self.articles(d, {"rletTpCd": "APT", "tradTpCd": "A1", "dprcMax": flt["max_price"]}):
+                    n += 1
+                    try:
+                        area = float(a.get("spc2") or 0)       # spc2 = 전용면적
+                        price = int(a.get("prc") or 0)
+                    except ValueError:
+                        continue
+                    if not price or price > flt["max_price"] or area < flt["min_area"]:
+                        continue
+                    out.append(Listing(
+                        source=self.name, id=str(a["atclNo"]), name=a.get("atclNm", ""),
+                        sido=region["sido"], sigungu=region["sigungu"],
+                        dong=d.get("CortarNm", ""), area=area, price=price,
+                        url=f"https://m.land.naver.com/article/info/{a['atclNo']}",
+                        floor=a.get("flrInfo", ""), building=a.get("bildNm", ""),
+                        title=a.get("atclFetrDesc", ""), bcode=str(a.get("cortarNo") or d["CortarNo"]),
+                        region=region["name"],
+                        extra={"realtor": a.get("rltrNm"), "same_addr": a.get("sameAddrCnt")},
+                    ))
             log.info("네이버 %s: 매물 %d건 확인", region["name"], n)
         return out
