@@ -17,7 +17,7 @@ def format_listing(l: Listing, b: dict) -> str:
     pct = (1 - l.price / b["base"]) * 100
     lines = [
         f"🏠 <b>[{SOURCE_KO.get(l.source, l.source)}] {e(l.name)}</b>",
-        f"📍 {e(l.sigungu)} {e(l.dong)} · 전용 {l.area:g}㎡"
+        f"📍 {e(l.sigungu or l.sido)} {e(l.dong)} · 전용 {l.area:g}㎡"
         + (f" · {e(l.building)}" if l.building else "")
         + (f" · {e(l.floor)}층" if l.floor and not l.floor.endswith("층") else (f" · {e(l.floor)}" if l.floor else "")),
         f"💰 <b>매매 {fmt_price(l.price)}</b>  ({BASE_KO.get(b['mode'], '실거래')} {fmt_price(b['base'])} 대비 <b>-{pct:.1f}%</b>)",

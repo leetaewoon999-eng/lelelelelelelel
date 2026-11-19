@@ -75,7 +75,7 @@ class Zigbang:
 
     # ── 단지 목록 ─────────────────────────────────────────
     def _center(self, region: dict) -> tuple[float, float]:
-        q = region["dongs"][0] if region.get("dongs") else region["sigungu"]
+        q = region["dongs"][0] if region.get("dongs") else region["sigungu"]  # 세종처럼 시군구가 없으면 동으로 검색
         r = self.http.get(f"{API}/v2/search",
                           params={"q": q, "serviceType": "아파트", "leaseYn": "N"}).json()
         for it in r.get("items", []):
@@ -93,7 +93,8 @@ class Zigbang:
         radius = 1 if region.get("dongs") else 2
         cells = {geohash(lat + i * CELL, lng + j * CELL)
                  for i in range(-radius, radius + 1) for j in range(-radius, radius + 1)}
-        gugun, dongs = _gugun(region["sigungu"]), set(region.get("dongs") or [])
+        gugun = region.get("zigbang_gugun") or _gugun(region["sigungu"])
+        dongs = set(region.get("dongs") or [])
         found = {}
         for c in sorted(cells):
             d = self.http.get(f"{API}/apt/locals/prices/on-danjis", params={"geohash": c}).json()

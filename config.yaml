@@ -30,7 +30,6 @@ sources:
 regions:
   - { name: 수원 영통구,   sido: 경기도,     sigungu: 수원시 영통구, lawd_cd: "41117" }
   - { name: 수원 권선구,   sido: 경기도,     sigungu: 수원시 권선구, lawd_cd: "41113" }
-  - { name: 수원 화서동,   sido: 경기도,     sigungu: 수원시 팔달구, lawd_cd: "41115", dongs: [화서동] }
   - { name: 군포 산본동,   sido: 경기도,     sigungu: 군포시,        lawd_cd: "41410", dongs: [산본동] }
   - { name: 안양 평촌동,   sido: 경기도,     sigungu: 안양시 동안구, lawd_cd: "41173", dongs: [평촌동] }
   # 의왕시에는 '내곡동'이라는 법정동이 없어 '내손동'으로 넣었습니다. 다르면 고쳐주세요.
@@ -44,6 +43,7 @@ regions:
   - { name: 서울 용산구,   sido: 서울특별시, sigungu: 용산구,        lawd_cd: "11170" }
   - { name: 성남 수정구,   sido: 경기도,     sigungu: 성남시 수정구, lawd_cd: "41131" }
   - { name: 성남 중원구,   sido: 경기도,     sigungu: 성남시 중원구, lawd_cd: "41133" }
+  - { name: 세종 나성동,   sido: 세종특별자치시, sigungu: "",     lawd_cd: "36110", dongs: [나성동], zigbang_gugun: 세종 }
   - { name: 성남 분당구,   sido: 경기도,     sigungu: 성남시 분당구, lawd_cd: "41135" }
 
 # 한 번 실행에서 알림이 이보다 많으면 묶어서 요약 메시지로 보냄

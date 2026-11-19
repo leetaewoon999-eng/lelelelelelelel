@@ -79,7 +79,8 @@ class Daangn:
             dongs = region.get("dongs") or dongs_by_region.get(region["name"], [])
             n = 0
             for dong in dongs:
-                url = f"{BASE}/map/{quote(region['sido'])}/{quote(region['sigungu'])}/{quote(dong)}"
+                parts = [region["sido"], region["sigungu"], dong]      # 세종: 시도/동
+                url = f"{BASE}/map/" + "/".join(quote(x) for x in parts if x)
                 try:
                     r = self.http.get(url)
                     if r.status_code != 200:
@@ -101,7 +102,8 @@ class Daangn:
                         log.warning("당근 매물 %s 상세 실패: %s", a["id"], e)
                         continue
                     # 상세 주소가 다른 시군구면 제외 (지도 페이지에 인접 지역 매물이 섞여 나옴)
-                    if d["jibun_address"] and region["sigungu"].split()[-1] not in d["jibun_address"]:
+                    area_name = region["sigungu"].split()[-1] if region["sigungu"] else region["sido"]
+                    if d["jibun_address"] and area_name not in d["jibun_address"]:
                         continue
                     if region.get("dongs") and (d["dong"] or a["dong"]) not in region["dongs"]:
                         continue
