@@ -98,6 +98,12 @@ def main() -> int:
             errors.append(f"{SOURCE_KO.get(name, name)}: {e}")
             log.exception("%s 수집 실패", name)
 
+    # 특정 단지만 감시하는 지역
+    want = {r["name"]: [k.replace(" ", "") for k in r["danjis"]] for r in regions if r.get("danjis")}
+    if want:
+        listings = [l for l in listings if l.region not in want
+                    or any(k in l.name.replace(" ", "") for k in want[l.region])]
+
     log.info("조건(%s 이하, 전용 %s㎡ 이상) 1차 통과 매물 %d건",
              fmt_price(flt["max_price"]), flt["min_area"], len(listings))
 

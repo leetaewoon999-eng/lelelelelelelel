@@ -143,8 +143,10 @@ class Zigbang:
                 log.warning("직방 %s 단지 목록 실패: %s", region["name"], e)
                 continue
             rt = self.cache["roomtypes"]
+            only = [k.replace(" ", "") for k in region.get("danjis") or []]
             cands = [d for d in danjis
-                     if (not d["sales_min"] or d["sales_min"] <= skip_above)
+                     if (not only or any(k in d["name"].replace(" ", "") for k in only))
+                     and (not d["sales_min"] or d["sales_min"] <= skip_above)
                      and rt.get(str(d["id"]), 999) >= MIN_SUPPLY_M2]
             with ThreadPoolExecutor(max_workers=WORKERS) as ex:
                 results = list(ex.map(self._catalog, cands))

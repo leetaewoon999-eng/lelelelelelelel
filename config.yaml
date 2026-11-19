@@ -44,6 +44,9 @@ regions:
   - { name: 성남 수정구,   sido: 경기도,     sigungu: 성남시 수정구, lawd_cd: "41131" }
   - { name: 성남 중원구,   sido: 경기도,     sigungu: 성남시 중원구, lawd_cd: "41133" }
   - { name: 세종 나성동,   sido: 세종특별자치시, sigungu: "",     lawd_cd: "36110", dongs: [나성동], zigbang_gugun: 세종 }
+  # danjis: 이 단지만 감시 (단지명에 포함된 글자로 비교)
+  - { name: 세종 새롬동,   sido: 세종특별자치시, sigungu: "",     lawd_cd: "36110", dongs: [새롬동], zigbang_gugun: 세종,
+      danjis: [새뜸마을6단지, 새뜸마을10단지, 새뜸마을11단지, 새뜸마을14단지] }
   - { name: 성남 분당구,   sido: 경기도,     sigungu: 성남시 분당구, lawd_cd: "41135" }
 
 # 한 번 실행에서 알림이 이보다 많으면 묶어서 요약 메시지로 보냄
