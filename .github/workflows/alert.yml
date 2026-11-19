@@ -1,0 +1,43 @@
+name: 부동산 매물 알림
+
+on:
+  schedule:
+    - cron: "7,37 * * * *"     # 30분마다 (UTC 기준, GitHub 사정으로 수 분~수십 분 지연될 수 있음)
+  workflow_dispatch: {}
+
+concurrency:
+  group: realestate-alert
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+
+      - name: 상태 복원 (알림 기록·실거래 캐시)
+        uses: actions/cache/restore@v4
+        with:
+          path: state
+          key: state-${{ github.run_id }}
+          restore-keys: state-
+
+      - name: 실행
+        env:
+          MOLIT_API_KEY: ${{ secrets.MOLIT_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python -m alert
+
+      - name: 상태 저장
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: state
+          key: state-${{ github.run_id }}
