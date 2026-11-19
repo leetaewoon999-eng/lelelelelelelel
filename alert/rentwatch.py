@@ -52,10 +52,16 @@ class Complex:
         return True
 
     def matches(self, name: str) -> bool:
-        n = norm_name(name)
-        if len(n) < 3:
-            return False
-        return any(a and (a in n or (len(n) >= 5 and n in a)) for a in self.aliases)
+        """단지명 일치 ('광교' 접두어·괄호·공백 무시). 비슷한 다른 단지(…트라엘 등)는 제외."""
+        n = _key(name)
+        return bool(n) and any(n == _key(a) for a in self.aliases)
+
+
+def _key(name: str) -> str:
+    n = norm_name(name)
+    for w in ("광교", "오피스텔"):
+        n = n.replace(w, "")
+    return n
 
 
 class RentWatch:
@@ -184,6 +190,21 @@ class RentWatch:
         log.info("네이버 반전세: 매물 %d건 확인", len(out))
         return out
 
+    # ── 부동산뱅크 ────────────────────────────────────────
+    def neonet(self, nn) -> list[Listing]:
+        out = []
+        for gbn in ("AT", "OP"):          # 아파트, 오피스텔
+            for dong, cname, c in nn.scan(self.region["lawd_cd"], self.region.get("dongs"), gbn,
+                                          lambda nm: self.find(nm) is not None):
+                cx = self.find(c["name"]) or self.find(cname)
+                if not cx or c["kind"] != "월세":
+                    continue
+                out.append(self._lst("neonet", f"r{c['id']}", cx, c["deposit"], c["rent"], c["excl"],
+                                     c["supply"], f"{nn.detail_url(c['id'], gbn)}", c["floor"], c["building"]))
+        nn.save()
+        log.info("부동산뱅크 반전세: 매물 %d건 확인", len(out))
+        return out
+
     # ── 판정 ──────────────────────────────────────────────
     def check(self, listings: list[Listing]) -> list[tuple[Listing, float]]:
         hits = []
@@ -206,7 +227,7 @@ def format_rent(l: Listing, lim: float) -> str:
     lines = [
         f"🔑 <b>[{SOURCE_KO.get(l.source, l.source)} 반전세] {e(l.name)}</b>",
         "📍 " + " · ".join(x for x in [size, e(l.building), f"{e(l.floor)}층" if l.floor and l.floor[-1].isdigit() else e(l.floor)] if x),
-        f"💰 <b>보증금 {fmt_price(l.price)} / 월 {rent}만</b>  (기준 월 {lim:.0f}만 → {lim - rent:.0f}만 저렴)",
+        f"💰 <b>보증금 {fmt_price(l.price)} / 월 {rent}만</b>  (기준 월 {lim:.0f}만" + (f" → {lim - rent:.0f}만 저렴)" if lim - rent >= 0.5 else " 이하)") + "",
     ]
     if l.title:
         lines.append(f"📝 {e(l.title[:80])}")

@@ -17,6 +17,7 @@ from .notify import SOURCE_KO, Telegram, format_listing
 from .rentwatch import RentWatch, format_rent
 from .sources.daangn import Daangn
 from .sources.naver import Naver, NaverBlocked
+from .sources.neonet import Neonet
 from .sources.zigbang import Zigbang
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -86,7 +87,7 @@ def main() -> int:
     rent_listings: list[Listing] = []
     rw = RentWatch(cfg)
     errors: list[str] = []
-    for name in ("zigbang", "daangn", "naver"):
+    for name in ("zigbang", "daangn", "neonet", "naver"):
         if name not in enabled:
             continue
         try:
@@ -102,6 +103,12 @@ def main() -> int:
                 if rw.enabled and not args.no_rent:
                     rent_listings += rw.daangn(dg)
                     dg.save()
+            elif name == "neonet":
+                nn = Neonet(cfg, state_dir)
+                if rw.enabled and not args.no_rent:      # 광교 반전세 먼저 (요청 상한 때문에)
+                    rent_listings += rw.neonet(nn)
+                if not args.rent_only:
+                    listings += nn.fetch(regions, flt)
             elif name == "naver":
                 nv = Naver(cfg, state_dir)
                 if not args.rent_only:

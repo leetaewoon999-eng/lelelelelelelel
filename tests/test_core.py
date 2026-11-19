@@ -63,5 +63,5 @@ def test_rent_interp():
     t = [[5000, 230], [10000, 205], [15000, 180]]
     assert _interp(t, 7500) == 217.5 and _interp(t, 20000) == 155
     c = Complex({"name": "광교해모로", "tables": [t]}, 95)
-    assert c.matches("광교 해모로") and not c.matches("광교")
+    assert c.matches("광교 해모로") and c.matches("해모로(광교)") and not c.matches("광교") and not c.matches("광교해모로2차")
     assert not c.size_ok(84, 80) and c.size_ok(99, 130)

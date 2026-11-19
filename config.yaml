@@ -22,6 +22,7 @@ real_price:
 sources:
   zigbang: true             # 직방 (호갱노노와 같은 회사, 매물 풀 공유)
   daangn: true              # 당근 부동산 (직거래 매물 위주)
+  neonet: true              # 부동산뱅크 (한 번에 250페이지까지, 매물 수 바뀐 단지만 읽음)
   naver: false              # 네이버 부동산: 해외/클라우드 IP 차단 → 국내 PC에서 돌릴 때만 true
 
 # 감시 지역

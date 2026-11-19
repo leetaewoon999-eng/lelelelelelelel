@@ -8,7 +8,7 @@ import requests
 
 from .common import Listing, fmt_price, log
 
-SOURCE_KO = {"zigbang": "직방", "daangn": "당근", "naver": "네이버"}
+SOURCE_KO = {"zigbang": "직방", "daangn": "당근", "naver": "네이버", "neonet": "부동산뱅크"}
 BASE_KO = {"latest": "최근 실거래", "avg3": "최근 3건 평균", "max": "최고 실거래"}
 
 
